@@ -1,0 +1,134 @@
+# Dependency Update and Security Scanning
+# This workflow runs weekly to check for dependency updates and security vulnerabilities
+
+name: Dependency Update & Security
+
+on:
+  schedule:
+    # Run every Monday at 9 AM UTC
+    - cron: "0 9 * * 1"
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: "fs"
+          scan-ref: "."
+          format: "sarif"
+          output: "trivy-results.sarif"
+          severity: "CRITICAL,HIGH,MEDIUM"
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: "trivy-results.sarif"
+
+  dependency-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Check backend dependencies
+        run: |
+          cd backend
+          pip install pip-tools
+          pip-compile --upgrade --dry-run requirements.txt
+
+      - name: Check lambda dependencies
+        run: |
+          cd infra/scheduled-digest-lambda
+          pip install pip-tools
+          pip-compile --upgrade --dry-run requirements.txt
+
+  npm-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: |
+          cd frontend
+          npm ci
+
+      - name: Run npm audit
+        run: |
+          cd frontend
+          npm audit --audit-level=moderate
+
+  create-dependency-pr:
+    runs-on: ubuntu-latest
+    needs: [security-scan, dependency-check, npm-audit]
+    if: github.event_name == 'schedule'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Update Python dependencies
+        run: |
+          cd backend
+          pip install pip-tools
+          pip-compile --upgrade requirements.txt
+
+          cd ../infra/scheduled-digest-lambda
+          pip-compile --upgrade requirements.txt
+
+      - name: Update npm dependencies
+        run: |
+          cd frontend
+          npm update
+          npm audit fix
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore: update dependencies"
+          title: "🔄 Automated Dependency Update"
+          body: |
+            ## Automated Dependency Update
+
+            This PR updates dependencies to their latest compatible versions.
+
+            ### Changes
+            - Updated Python dependencies in backend and lambda
+            - Updated npm dependencies in frontend
+            - Security vulnerability fixes
+
+            ### Testing
+            - [ ] Backend tests pass
+            - [ ] Frontend tests pass
+            - [ ] Lambda tests pass
+            - [ ] Security scan passes
+
+            ### Review
+            Please review the changes and ensure all tests pass before merging.
+          branch: dependency-update
+          delete-branch: true

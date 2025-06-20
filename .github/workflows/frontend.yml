@@ -1,0 +1,92 @@
+# Frontend CI/CD for React (S3 + CloudFront)
+# This workflow runs on push and PRs to main. It lints, typechecks, builds, deploys to S3, and invalidates CloudFront.
+
+name: Frontend CI/CD
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "frontend/**"
+      - ".github/workflows/frontend.yml"
+      - "package.json"
+      - "package-lock.json"
+      - "bun.lockb"
+  pull_request:
+    branches: [main]
+    paths:
+      - "frontend/**"
+      - ".github/workflows/frontend.yml"
+      - "package.json"
+      - "package-lock.json"
+      - "bun.lockb"
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      # Checkout code
+      - uses: actions/checkout@v4
+
+      # Set up Node.js
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      # Install dependencies
+      - name: Install dependencies
+        run: |
+          cd frontend
+          npm ci
+
+      # Lint and typecheck
+      - name: Lint & Typecheck
+        run: |
+          cd frontend
+          npm run lint
+          npm run typecheck
+
+      # Build
+      - name: Build
+        run: |
+          cd frontend
+          npm run build
+
+  deploy:
+    needs: build-test
+    runs-on: ubuntu-latest
+    environment: production
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+
+      # Build frontend
+      - name: Build frontend
+        run: |
+          cd frontend
+          npm ci
+          npm run build
+        env:
+          VITE_API_BASE_URL: ${{ secrets.API_BASE_URL }}
+
+      # Sync to S3
+      - name: Sync to S3
+        uses: jakejarvis/s3-sync-action@master
+        with:
+          args: --delete
+        env:
+          AWS_S3_BUCKET: ${{ secrets.AWS_S3_BUCKET }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: "us-east-1"
+          SOURCE_DIR: "frontend/dist"
+
+      # Invalidate CloudFront
+      - name: Invalidate CloudFront
+        uses: chetan/invalidate-cloudfront-action@v2
+        env:
+          DISTRIBUTION: ${{ secrets.AWS_CLOUDFRONT_DISTRIBUTION_ID }}
+          PATHS: "/*"
+          AWS_REGION: "us-east-1"
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}

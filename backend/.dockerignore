@@ -1,0 +1,27 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Local config/secrets
+.env
+.env.*  # if you have multiple envs like .env.dev, .env.prod
+*.sqlite3
+
+# Editor files
+.vscode/
+.idea/
+.DS_Store
+
+# Git
+.git/
+.gitignore
+
+# Tests and dev stuff
+tests/
+*.log
+
+# Docker itself
+Dockerfile
+docker-compose.yml

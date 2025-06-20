@@ -1,0 +1,160 @@
+# Lambda CI/CD for Infrasync Digest Lambda
+# This workflow runs on push and PRs to main. It builds, tests, scans, and deploys the lambda function.
+
+name: Lambda CI/CD
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "infra/scheduled-digest-lambda/**"
+      - ".github/workflows/lambda.yml"
+      - "backend/services/digest.py"
+      - "backend/routes/digest.py"
+  pull_request:
+    branches: [main]
+    paths:
+      - "infra/scheduled-digest-lambda/**"
+      - ".github/workflows/lambda.yml"
+      - "backend/services/digest.py"
+      - "backend/routes/digest.py"
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      actions: read
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: "fs"
+          scan-ref: "infra/scheduled-digest-lambda"
+          format: "sarif"
+          output: "trivy-results.sarif"
+          severity: "CRITICAL,HIGH"
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always() && github.event_name != 'pull_request' && github.repository == github.event.repository.full_name
+        continue-on-error: true
+        with:
+          sarif_file: "trivy-results.sarif"
+
+  docker-deploy:
+    needs: [security-scan]
+    runs-on: ubuntu-latest
+    environment: production
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build, tag, and push docker image to Amazon ECR
+        id: build-image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          REPOSITORY: ${{ secrets.AWS_LAMBDA_ECR_REPOSITORY }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          cd infra/scheduled-digest-lambda
+          docker build -t $ECR_REGISTRY/$REPOSITORY:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$REPOSITORY:$IMAGE_TAG
+          echo "image=$ECR_REGISTRY/$REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+      - name: Update Lambda function
+        run: |
+          aws lambda update-function-code \
+            --function-name ${{ secrets.AWS_LAMBDA_NAME }} \
+            --image-uri ${{ steps.build-image.outputs.image }}
+
+      - name: Wait for Lambda code update to complete
+        run: |
+          echo "Waiting for Lambda function update to complete..."
+          aws lambda wait function-updated --function-name ${{ secrets.AWS_LAMBDA_NAME }}
+
+      - name: Update Lambda environment variables (with retry)
+        run: |
+          set -e
+          MAX_RETRIES=3
+          RETRY_DELAY=10
+          for i in $(seq 1 $MAX_RETRIES); do
+            env_json=$(jq -n \
+              --arg supabase_url "${{ secrets.SUPABASE_URL }}" \
+              --arg supabase_key "${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+              --arg backend_endpoint "${{ secrets.BACKEND_DIGEST_ENDPOINT }}" \
+              '{
+                "Variables": {
+                  "SUPABASE_URL": $supabase_url,
+                  "SUPABASE_SERVICE_ROLE_KEY": $supabase_key,
+                  "BACKEND_DIGEST_ENDPOINT": $backend_endpoint,
+                  "RETENTION_DAYS": "30",
+                  "LOG_LEVEL": "INFO"
+                }
+              }')
+            if aws lambda update-function-configuration \
+              --function-name ${{ secrets.AWS_LAMBDA_NAME }} \
+              --environment "$env_json"; then
+              echo "Lambda environment updated successfully."
+              break
+            else
+              echo "Update attempt $i failed, retrying in $RETRY_DELAY seconds..."
+              sleep $RETRY_DELAY
+            fi
+            if [ "$i" -eq "$MAX_RETRIES" ]; then
+              echo "Failed to update Lambda environment after $MAX_RETRIES attempts."
+              exit 1
+            fi
+          done
+
+      - name: Wait for Lambda update
+        run: |
+          aws lambda wait function-updated \
+            --function-name ${{ secrets.AWS_LAMBDA_NAME }}
+
+      - name: Verify Lambda Deployment
+        run: |
+          # Wait a bit for the deployment to settle
+          sleep 30
+
+          # Get the current image URI
+          CURRENT_IMAGE=$(aws lambda get-function \
+            --function-name ${{ secrets.AWS_LAMBDA_NAME }} \
+            --query 'Code.ImageUri' \
+            --output text)
+
+          echo "Current image: $CURRENT_IMAGE"
+          echo "Expected image: ${{ steps.build-image.outputs.image }}"
+
+          # Verify the function is using the latest image
+          if [ "$CURRENT_IMAGE" != "${{ steps.build-image.outputs.image }}" ]; then
+            echo "❌ Lambda function is not using the latest image. This indicates a rollback occurred."
+            exit 1
+          fi
+
+          # Verify the function is active
+          FUNCTION_STATE=$(aws lambda get-function \
+            --function-name ${{ secrets.AWS_LAMBDA_NAME }} \
+            --query 'Configuration.State' \
+            --output text)
+
+          if [ "$FUNCTION_STATE" != "Active" ]; then
+            echo "❌ Lambda function is not active. Current state: $FUNCTION_STATE"
+            exit 1
+          fi
+
+          echo "✅ Lambda deployment verified successfully - using latest image"
