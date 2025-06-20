@@ -1,0 +1,28 @@
+# ----------------------
+# Frontend (Node/Vite)
+# ----------------------
+node_modules/
+dist/
+.env
+.vite
+*.log
+
+# ----------------------
+# Backend (Python/FastAPI)
+# ----------------------
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+env/
+venv/
+.env
+*.db
+instance/
+*.sqlite3
+
+# ----------------------
+# System
+# ----------------------
+.DS_Store
+Thumbs.db

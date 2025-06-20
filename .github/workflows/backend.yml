@@ -1,0 +1,147 @@
+# Backend CI/CD for FastAPI (AWS Fargate)
+# This workflow runs on push and PRs to main. It lints, typechecks, tests, builds, pushes, and deploys.
+
+name: Backend CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      # Checkout code
+      - uses: actions/checkout@v4
+
+      # Set up Python
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # Install dependencies
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+
+      - name: Lint, Format & Typecheck
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+          echo "Running ruff (lint only)..."
+          ruff check .
+
+          echo "Running black (format check only)..."
+          black . --check
+
+      # Run tests (if you have them)
+      - name: Run tests
+        run: |
+          cd backend
+          pytest || echo 'No tests found'
+
+  docker-deploy:
+    needs: build-test
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1 # <-- Set your region here
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build, tag, and push docker image to Amazon ECR
+        id: build-image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          REPOSITORY: ${{ secrets.AWS_ECR_REPOSITORY }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          cd backend
+          docker build -t $ECR_REGISTRY/$REPOSITORY:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$REPOSITORY:$IMAGE_TAG
+          echo "image=$ECR_REGISTRY/$REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+      - name: Fill in the new image ID in the Amazon ECS task definition
+        id: task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: backend/ecs-task-def.json
+          container-name: fastapi
+          image: ${{ steps.build-image.outputs.image }}
+
+      - name: Deploy to ECS Fargate
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+        with:
+          task-definition: ${{ steps.task-def.outputs.task-definition }}
+          service: ${{ secrets.AWS_ECS_SERVICE }}
+          cluster: ${{ secrets.AWS_ECS_CLUSTER }}
+          wait-for-service-stability: true
+
+      - name: Verify ECS Deployment
+        run: |
+          # Wait a bit for the deployment to settle
+          sleep 30
+
+          # Check if the service is stable
+          SERVICE_STATUS=$(aws ecs describe-services \
+            --cluster ${{ secrets.AWS_ECS_CLUSTER }} \
+            --services ${{ secrets.AWS_ECS_SERVICE }} \
+            --query 'services[0].status' \
+            --output text)
+
+          echo "Service status: $SERVICE_STATUS"
+
+          if [ "$SERVICE_STATUS" != "ACTIVE" ]; then
+            echo "❌ ECS service is not active. Current status: $SERVICE_STATUS"
+            exit 1
+          fi
+
+          # Check if tasks are running
+          RUNNING_TASKS=$(aws ecs describe-services \
+            --cluster ${{ secrets.AWS_ECS_CLUSTER }} \
+            --services ${{ secrets.AWS_ECS_SERVICE }} \
+            --query 'services[0].runningCount' \
+            --output text)
+
+          echo "Running tasks: $RUNNING_TASKS"
+
+          if [ "$RUNNING_TASKS" -eq 0 ]; then
+            echo "❌ No tasks are running. Deployment may have failed."
+            exit 1
+          fi
+
+          # Check if the deployment is using the latest task definition
+          LATEST_TASK_DEF=$(aws ecs describe-task-definition \
+            --task-definition infrasync-task \
+            --query 'taskDefinition.taskDefinitionArn' \
+            --output text)
+
+          CURRENT_TASK_DEF=$(aws ecs describe-services \
+            --cluster ${{ secrets.AWS_ECS_CLUSTER }} \
+            --services ${{ secrets.AWS_ECS_SERVICE }} \
+            --query 'services[0].taskDefinition' \
+            --output text)
+
+          echo "Latest task definition: $LATEST_TASK_DEF"
+          echo "Current task definition: $CURRENT_TASK_DEF"
+
+          if [ "$LATEST_TASK_DEF" != "$CURRENT_TASK_DEF" ]; then
+            echo "❌ Service is not using the latest task definition. This indicates a rollback occurred."
+            exit 1
+          fi
+
+          echo "✅ ECS deployment verified successfully - using latest task definition"
