@@ -1,0 +1,52 @@
+# Lint & Typecheck for Backend and Frontend
+# This workflow runs on every push and PR to main. It ensures code quality for both backend and frontend.
+
+name: Lint & Typecheck
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+          pip install flake8 mypy
+      - name: Lint
+        run: |
+          cd backend
+          flake8 .
+      - name: Typecheck
+        run: |
+          cd backend
+          mypy .
+
+  frontend-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install dependencies
+        run: |
+          cd frontend
+          npm ci
+      - name: Lint
+        run: |
+          cd frontend
+          npm run lint
+      - name: Typecheck
+        run: |
+          cd frontend
+          npm run typecheck

@@ -1,0 +1,45 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - "rules/*.yml"
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - alertmanager:9093
+
+scrape_configs:
+  # Infrasync API
+  - job_name: "infrasync-api"
+    static_configs:
+      - targets: ["localhost:8000"]
+    metrics_path: "/metrics"
+    scrape_interval: 30s
+    scrape_timeout: 10s
+
+  # Node Exporter (system metrics)
+  - job_name: "node-exporter"
+    static_configs:
+      - targets: ["localhost:9100"]
+    scrape_interval: 15s
+
+  # PostgreSQL
+  - job_name: "postgres"
+    static_configs:
+      - targets: ["localhost:9187"]
+    scrape_interval: 30s
+
+  # Redis
+  - job_name: "redis"
+    static_configs:
+      - targets: ["localhost:9121"]
+    scrape_interval: 30s
+
+  # Self-monitoring
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+    scrape_interval: 30s

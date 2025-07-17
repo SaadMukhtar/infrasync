@@ -12,15 +12,21 @@ Your Job and rules:
 – Don't make up anything not provided, try to use the most important commits
 
 Example highlights output format:
-"
-🐛 Bugfixes:
-- Memory freed by removing back pointers in Flight
+*🐛 Bugfixes:*
+     • Resolved admin role mismatch
 
-♻️ Refactors:
-- Removed unused FiberStack functions
+*✨ Features:*
+     • Enabled 2FA and dark mode settings
 
-⚡️ Performance:
-- Improve API endpoint cache to increase speed by 20ms"
+*♻️ Refactors:*
+     • Modularized auth and simplified queries
+
+*📝 Docs:*
+     • Improved README and contribution guide
+
+*⚡️ Performance:*
+     • Optimized image rendering
+
 
 Data to use to create highlights:
 {grouped_highlights}

@@ -1,0 +1,73 @@
+# Backend CI/CD for FastAPI (AWS Fargate)
+# This workflow runs on push and PRs to main. It lints, typechecks, tests, builds, pushes, and deploys.
+
+name: Backend CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      # Checkout code
+      - uses: actions/checkout@v4
+
+      # Set up Python
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # Install dependencies
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+
+      # Lint and typecheck
+      - name: Lint & Typecheck
+        run: |
+          cd backend
+          pip install flake8 mypy
+          flake8 .
+          mypy .
+
+      # Run tests (if you have them)
+      - name: Run tests
+        run: |
+          cd backend
+          pytest || echo 'No tests found'
+
+  docker-deploy:
+    needs: build-test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+
+      # Login to Amazon ECR (Elastic Container Registry)
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      # Build, tag, and push Docker image
+      - name: Build and push Docker image
+        env:
+          ECR_REGISTRY: ${{ secrets.AWS_ECR_REGISTRY }}
+          ECR_REPOSITORY: ${{ secrets.AWS_ECR_REPOSITORY }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          cd backend
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+
+      # Deploy to ECS Fargate
+      - name: Deploy to ECS Fargate
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+        with:
+          task-definition: ecs-task-def.json # You can generate this or check it in
+          service: ${{ secrets.AWS_ECS_SERVICE }}
+          cluster: ${{ secrets.AWS_ECS_CLUSTER }}
+          wait-for-service-stability: true

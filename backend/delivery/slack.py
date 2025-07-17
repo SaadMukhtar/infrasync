@@ -7,13 +7,11 @@ logger = logging.getLogger(__name__)
 
 
 class SlackService:
-    def __init__(self):
-        self.default_webhook_url = os.getenv("SLACK_WEBHOOK_URL")
     
-    async def send_digest(self, summary: str, repo_name: str, repo_url: str, webhook_url: Optional[str] = None) -> bool:
+    async def send_digest(self, summary: str, repo_name: str, repo_url: str, webhook_url: str) -> bool:
         """Send repository digest to Slack via webhook."""
         try:
-            webhook = webhook_url or self.default_webhook_url
+            webhook = webhook_url
             if not webhook:
                 raise ValueError("No Slack webhook URL provided")
             
@@ -38,44 +36,26 @@ class SlackService:
             return False
     
     def _format_message(self, summary: str, repo_name: str, repo_url: str) -> dict:
-        """Format the message for Slack."""
+        """Format the message for Slack with clickable repo name in the title."""
         return {
-            "text": f"📊 GitHub Summary: {repo_name}",
+            "text": f"📊 Daily Digest: {repo_name}",
             "blocks": [
                 {
-                    "type": "header",
+                    "type": "divider"
+                },
+                {
+                    "type": "section",
                     "text": {
-                        "type": "plain_text",
-                        "text": f"📊 GitHub Summary: {repo_name}"
+                        "type": "mrkdwn",
+                        "text": f"*📊 Daily Digest: <{repo_url}|{repo_name}>*"
                     }
                 },
-                {
-                    "type": "context",
-                    "elements": [
-                        {
-                            "type": "mrkdwn",
-                            "text": "Here's a snapshot of what's changed in the past 24 hours."
-                        }
-                    ]
-                },
-                {
+                { 
                     "type": "section",
                     "text": {
                         "type": "mrkdwn",
                         "text": summary
                     }
                 },
-                {
-                    "type": "context",
-                    "elements": [
-                        {
-                            "type": "mrkdwn",
-                            "text": f"🔗 <{repo_url}|View Repository on GitHub>"
-                        }
-                    ]
-                },
-                {
-                    "type": "divider"
-                }
             ]
-        } 
+        }

@@ -10,24 +10,24 @@ class DeliveryMethod(str, Enum):
 
 
 class DigestRequest(BaseModel):
-    repo_url: HttpUrl = Field(..., description="GitHub repository URL")
+    repo: str = Field(..., description="GitHub repository in 'owner/repo' format")
     delivery_method: DeliveryMethod = Field(..., description="Delivery method for the digest")
     webhook_url: Optional[HttpUrl] = Field(None, description="Custom webhook URL (overrides default)")
     email: Optional[str] = Field(None, description="Email address for delivery (required if delivery_method is email)")
-    
+
     class Config:
         json_schema_extra = {
             "example": {
-                "repo_url": "https://github.com/octocat/Hello-World",
+                "repo": "octocat/Hello-World",
                 "delivery_method": "slack",
                 "webhook_url": "https://hooks.slack.com/services/YOUR/WEBHOOK/URL"
             }
         }
-
 
 class DigestResponse(BaseModel):
     success: bool
     message: str
     summary: str
     repo_name: str
-    delivery_status: str 
+    delivery_status: str
+    metrics_json: Optional[dict] = None 
