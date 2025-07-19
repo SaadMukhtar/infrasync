@@ -1,20 +1,41 @@
 from supabase import create_client
 from config import SUPABASE_SERVICE_ROLE_KEY, SUPABASE_URL
+from typing import List, Any, Optional, Dict
+
 
 class DigestService:
-    def __init__(self):
+    def __init__(self) -> None:
+        if SUPABASE_URL is None or SUPABASE_SERVICE_ROLE_KEY is None:
+            raise ValueError("Supabase environment variables not set")
         self.client = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
-    def get_monitor_digests(self, monitor_id: str, limit: int = 5):
-        digests_result = self.client.table("digests") \
-            .select("id, summary, status, delivered_at, error_message, delivery_method, metrics_json") \
-            .eq("monitor_id", monitor_id) \
-            .order("delivered_at", desc=True) \
-            .limit(limit) \
+    def get_monitor_digests(self, monitor_id: str, limit: int = 5) -> List[Dict[str, Any]]:
+        digests_result = (
+            self.client.table("digests")
+            .select(
+                "id, summary, status, delivered_at, error_message, delivery_method, metrics_json"
+            )
+            .eq("monitor_id", monitor_id)
+            .order("delivered_at", desc=True)
+            .limit(limit)
             .execute()
-        return digests_result.data if digests_result and digests_result.data else []
+        )
+        if digests_result and digests_result.data:
+            return list(digests_result.data)
+        return []
 
-    def log_digest(self, monitor_id: str, summary: str, status: str, delivered_at, delivery_method: str, error_message: str = None, created_by: str = None, raw_payload=None, metrics_json=None):
+    def log_digest(
+        self,
+        monitor_id: str,
+        summary: str,
+        status: str,
+        delivered_at: Any,
+        delivery_method: str,
+        error_message: Optional[str] = None,
+        created_by: Optional[str] = None,
+        raw_payload: Any = None,
+        metrics_json: Optional[Dict[str, Any]] = None,
+    ) -> None:
         digest = {
             "monitor_id": monitor_id,
             "summary": summary,
@@ -28,16 +49,32 @@ class DigestService:
         }
         self.client.table("digests").insert(digest).execute()
 
-    def aggregate_metrics(self, org_id=None, monitor_id=None, period_days=7, offset_days=0):
+    def aggregate_metrics(
+        self, org_id: Optional[str] = None, monitor_id: Optional[str] = None, period_days: int = 7, offset_days: int = 0
+    ) -> Dict[str, int]:
         from datetime import datetime, timedelta
-        since = (datetime.utcnow() - timedelta(days=period_days + offset_days)).isoformat()
-        until = (datetime.utcnow() - timedelta(days=offset_days)).isoformat() if offset_days > 0 else None
+
+        since = (
+            datetime.utcnow() - timedelta(days=period_days + offset_days)
+        ).isoformat()
+        until = (
+            (datetime.utcnow() - timedelta(days=offset_days)).isoformat()
+            if offset_days > 0
+            else None
+        )
         # If org_id is provided, fetch all monitor IDs for the org that are not deleted
         monitor_ids = []
         if org_id and not monitor_id:
             from services.monitor import MonitorService
+
             monitor_service = MonitorService()
-            monitors = monitor_service.client.table("monitors").select("id").eq("org_id", org_id).eq("deleted", False).execute()
+            monitors = (
+                monitor_service.client.table("monitors")
+                .select("id")
+                .eq("org_id", org_id)
+                .eq("deleted", False)
+                .execute()
+            )
             monitor_ids = [m["id"] for m in (monitors.data or [])]
         query = self.client.table("digests").select("metrics_json,monitor_id")
         if monitor_id:
@@ -53,7 +90,7 @@ class DigestService:
         if org_id and monitor_ids:
             digests = [d for d in digests if d.get("monitor_id") in monitor_ids]
         # Aggregate metrics
-        totals = {
+        totals: Dict[str, int] = {
             "prs_opened": 0,
             "prs_closed": 0,
             "issues_opened": 0,
@@ -70,23 +107,34 @@ class DigestService:
             totals["prs_closed"] += int(m.get("prs_closed", 0) or 0)
             totals["issues_opened"] += int(m.get("issues_opened", 0) or 0)
             totals["issues_closed"] += int(m.get("issues_closed", 0) or 0)
-            totals["bugfixes"] += len(m.get("bugfixes", []) or [])
-            totals["docs"] += len(m.get("docs", []) or [])
-            totals["features"] += len(m.get("features", []) or [])
-            totals["refactors"] += len(m.get("refactors", []) or [])
-            totals["perf"] += len(m.get("perf", []) or [])
+            totals["bugfixes"] += len(list(m.get("bugfixes", []) or []))
+            totals["docs"] += len(list(m.get("docs", []) or []))
+            totals["features"] += len(list(m.get("features", []) or []))
+            totals["refactors"] += len(list(m.get("refactors", []) or []))
+            totals["perf"] += len(list(m.get("perf", []) or []))
         return totals
 
-    def _days_ago_iso(self, days):
+    def _days_ago_iso(self, days: int) -> str:
         from datetime import datetime, timedelta
+
         return (datetime.utcnow() - timedelta(days=days)).isoformat()
 
-    def timeseries_metrics(self, monitor_id: str, period_days: int = 30):
+    def timeseries_metrics(self, monitor_id: str, period_days: int = 30) -> List[Dict[str, Any]]:
         from datetime import datetime, timedelta
         import collections
-        since = (datetime.utcnow() - timedelta(days=period_days)).replace(hour=0, minute=0, second=0, microsecond=0)
+
+        since = (datetime.utcnow() - timedelta(days=period_days)).replace(
+            hour=0, minute=0, second=0, microsecond=0
+        )
         # Fetch all digests for this monitor in the period
-        resp = self.client.table("digests").select("delivered_at, metrics_json").eq("monitor_id", monitor_id).gte("delivered_at", since.isoformat()).order("delivered_at").execute()
+        resp = (
+            self.client.table("digests")
+            .select("delivered_at, metrics_json")
+            .eq("monitor_id", monitor_id)
+            .gte("delivered_at", since.isoformat())
+            .order("delivered_at")
+            .execute()
+        )
         digests = resp.data if resp and resp.data else []
         # Group by day
         day_buckets = collections.defaultdict(list)
@@ -98,7 +146,7 @@ class DigestService:
         for i in range(period_days):
             day = (since + timedelta(days=i)).date().isoformat()
             metrics_list = day_buckets.get(day, [])
-            totals = {
+            totals: Dict[str, Any] = {
                 "date": day,
                 "prs_opened": 0,
                 "prs_closed": 0,
@@ -115,10 +163,10 @@ class DigestService:
                 totals["prs_closed"] += int(m.get("prs_closed", 0) or 0)
                 totals["issues_opened"] += int(m.get("issues_opened", 0) or 0)
                 totals["issues_closed"] += int(m.get("issues_closed", 0) or 0)
-                totals["bugfixes"] += len(m.get("bugfixes", []) or [])
-                totals["docs"] += len(m.get("docs", []) or [])
-                totals["features"] += len(m.get("features", []) or [])
-                totals["refactors"] += len(m.get("refactors", []) or [])
-                totals["perf"] += len(m.get("perf", []) or [])
+                totals["bugfixes"] += len(list(m.get("bugfixes", []) or []))
+                totals["docs"] += len(list(m.get("docs", []) or []))
+                totals["features"] += len(list(m.get("features", []) or []))
+                totals["refactors"] += len(list(m.get("refactors", []) or []))
+                totals["perf"] += len(list(m.get("perf", []) or []))
             results.append(totals)
         return results

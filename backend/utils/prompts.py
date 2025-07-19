@@ -1,5 +1,5 @@
 def build_summary_prompt(grouped_highlights: str) -> str:
-    
+
     return f"""
 You are an assistant completing the Highlights section of a Slack digest summarizing GitHub activity.
 
@@ -33,5 +33,3 @@ Data to use to create highlights:
 
 Your output:
 """
-
-

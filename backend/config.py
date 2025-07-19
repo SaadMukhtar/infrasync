@@ -4,15 +4,15 @@ from dotenv import load_dotenv
 import logging
 from slowapi.util import get_remote_address
 from slowapi import Limiter
-from typing import List, Optional
 
 logger = logging.getLogger(__name__)
 
 # Load the .env early
 load_dotenv(dotenv_path=Path(__file__).resolve().parent / ".env")
 
+
 # Environment validation
-def validate_env():
+def validate_env() -> None:
     required_vars = ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"]
     missing = [var for var in required_vars if not os.getenv(var)]
     if missing:
@@ -25,6 +25,7 @@ def validate_env():
         if not os.getenv("OPENAI_API_KEY"):
             logger.warning("OPENAI_ENABLED is true but OPENAI_API_KEY is not set")
 
+
 # Environment
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
 DEBUG = ENVIRONMENT == "development"
@@ -32,14 +33,23 @@ DEBUG = ENVIRONMENT == "development"
 # Front-end
 FRONTEND_URL = os.getenv("FRONTEND_URL")
 if not FRONTEND_URL or not FRONTEND_URL.startswith(("http://", "https://")):
-    raise ValueError("FRONTEND_URL must be set and start with http:// or https:// (current: '{}')".format(FRONTEND_URL))
+    raise ValueError(
+        "FRONTEND_URL must be set and start with http:// or https:// (current: '{}')".format(
+            FRONTEND_URL
+        )
+    )
 
 # Supabase
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
 
 # OpenAI
-OPENAI_ENABLED = os.getenv("OPENAI_ENABLED", "false").lower() in ("1", "true", "yes", "y")
+OPENAI_ENABLED = os.getenv("OPENAI_ENABLED", "false").lower() in (
+    "1",
+    "true",
+    "yes",
+    "y",
+)
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-3.5-turbo")
 OPENAI_MAX_TOKENS = int(os.getenv("OPENAI_MAX_TOKENS", "400"))
@@ -52,7 +62,9 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
 
 # CORS Settings
-ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:5173").split(",")
+ALLOWED_ORIGINS = os.getenv(
+    "ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:5173"
+).split(",")
 ALLOWED_METHODS = ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"]
 ALLOWED_HEADERS = [
     "Content-Type",
@@ -84,14 +96,22 @@ LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 
 # Monitoring Configuration
-ENABLE_METRICS = os.getenv("ENABLE_METRICS", "true").lower() in ("1", "true", "yes", "y")
+ENABLE_METRICS = os.getenv("ENABLE_METRICS", "true").lower() in (
+    "1",
+    "true",
+    "yes",
+    "y",
+)
 METRICS_PORT = int(os.getenv("METRICS_PORT", "9090"))
 
 # Feature Flags
 FEATURE_FLAGS = {
-    "enable_analytics": os.getenv("ENABLE_ANALYTICS", "false").lower() in ("1", "true", "yes", "y"),
-    "enable_weekly_digests": os.getenv("ENABLE_WEEKLY_DIGESTS", "false").lower() in ("1", "true", "yes", "y"),
-    "enable_on_merge_digests": os.getenv("ENABLE_ON_MERGE_DIGESTS", "false").lower() in ("1", "true", "yes", "y"),
+    "enable_analytics": os.getenv("ENABLE_ANALYTICS", "false").lower()
+    in ("1", "true", "yes", "y"),
+    "enable_weekly_digests": os.getenv("ENABLE_WEEKLY_DIGESTS", "false").lower()
+    in ("1", "true", "yes", "y"),
+    "enable_on_merge_digests": os.getenv("ENABLE_ON_MERGE_DIGESTS", "false").lower()
+    in ("1", "true", "yes", "y"),
 }
 
 # Stripe

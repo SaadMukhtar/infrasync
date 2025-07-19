@@ -1,1 +1,1 @@
-# Middleware package for Infrasync API 
+# Middleware package for Infrasync API

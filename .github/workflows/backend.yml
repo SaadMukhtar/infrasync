@@ -27,13 +27,20 @@ jobs:
           cd backend
           pip install -r requirements.txt
 
-      # Lint and typecheck
-      - name: Lint & Typecheck
+      - name: Lint, Format & Typecheck
+        working-directory: backend
         run: |
-          cd backend
-          pip install flake8 mypy
-          flake8 .
-          mypy .
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+          echo "Running ruff (lint only)..."
+          ruff check .
+
+          echo "Running black (format check only)..."
+          black . --check
+
+          echo "Running mypy (type check)..."
+          mypy . --strict
 
       # Run tests (if you have them)
       - name: Run tests
