@@ -1,0 +1,202 @@
+{
+  "taskDefinitionArn": "arn:aws:ecs:us-east-1:038462753447:task-definition/infrasync-task:3",
+  "containerDefinitions": [
+    {
+      "name": "fastapi",
+      "image": "038462753447.dkr.ecr.us-east-1.amazonaws.com/infrasync-backend:latest",
+      "cpu": 0,
+      "portMappings": [
+        {
+          "name": "fastapi-8000-tcp",
+          "containerPort": 8000,
+          "hostPort": 8000,
+          "protocol": "tcp",
+          "appProtocol": "http"
+        }
+      ],
+      "essential": true,
+      "environment": [
+        {
+          "name": "SLACK_WEBHOOK_URL",
+          "value": "https://hooks.slack.com/services/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"
+        }
+      ],
+      "mountPoints": [],
+      "volumesFrom": [],
+      "secrets": [
+        {
+          "name": "GITHUB_CLIENT_ID",
+          "valueFrom": "arn:aws:ssm:us-east-1:038462753447:parameter/infrasync/GITHUB_CLIENT_ID"
+        },
+        {
+          "name": "STRIPE_SECRET_KEY",
+          "valueFrom": "arn:aws:ssm:us-east-1:038462753447:parameter/infrasync/STRIPE_SECRET_KEY"
+        },
+        {
+          "name": "OPENAI_MAX_TOKENS",
+          "valueFrom": "arn:aws:ssm:us-east-1:038462753447:parameter/infrasync/OPENAI_MAX_TOKENS"
+        },
+        {
+          "name": "RATE_LIMIT_DEFAULT",
+          "valueFrom": "arn:aws:ssm:us-east-1:038462753447:parameter/infrasync/RATE_LIMIT_DEFAULT"
+        },
+        {
+          "name": "METRICS_PORT",
+          "valueFrom": "arn:aws:ssm:us-east-1:038462753447:parameter/infrasync/METRICS_PORT"
+        },
+        {
+          "name": "SUPABASE_URL",
+          "valueFrom": "arn:aws:ssm:us-east-1:038462753447:parameter/infrasync/SUPABASE_URL"
+        },
+        {
+          "name": "RATE_LIMIT_DIGEST",
+          "valueFrom": "arn:aws:ssm:us-east-1:038462753447:parameter/infrasync/RATE_LIMIT_DIGEST"
+        },
+        {
+          "name": "ALLOWED_ORIGINS",
+          "valueFrom": "arn:aws:ssm:us-east-1:038462753447:parameter/infrasync/ALLOWED_ORIGINS"
+        },
+        {
+          "name": "SUPABASE_SERVICE_ROLE_KEY",
+          "valueFrom": "arn:aws:ssm:us-east-1:038462753447:parameter/infrasync/SUPABASE_SERVICE_ROLE_KEY"
+        },
+        {
+          "name": "OPENAI_ENABLED",
+          "valueFrom": "arn:aws:ssm:us-east-1:038462753447:parameter/infrasync/OPENAI_ENABLED"
+        },
+        {
+          "name": "JWT_SECRET",
+          "valueFrom": "arn:aws:ssm:us-east-1:038462753447:parameter/infrasync/JWT_SECRET"
+        },
+        {
+          "name": "STRIPE_PRICE_ID_TEAM",
+          "valueFrom": "arn:aws:ssm:us-east-1:038462753447:parameter/infrasync/STRIPE_PRICE_ID_TEAM"
+        },
+        {
+          "name": "STRIPE_PRICE_ID_FREE",
+          "valueFrom": "arn:aws:ssm:us-east-1:038462753447:parameter/infrasync/STRIPE_PRICE_ID_FREE"
+        },
+        {
+          "name": "STRIPE_PRICE_ID_PRO",
+          "valueFrom": "arn:aws:ssm:us-east-1:038462753447:parameter/infrasync/STRIPE_PRICE_ID_PRO"
+        },
+        {
+          "name": "ACCESS_TOKEN_EXPIRE_MINUTES",
+          "valueFrom": "arn:aws:ssm:us-east-1:038462753447:parameter/infrasync/ACCESS_TOKEN_EXPIRE_MINUTES"
+        },
+        {
+          "name": "GITHUB_CLIENT_SECRET",
+          "valueFrom": "arn:aws:ssm:us-east-1:038462753447:parameter/infrasync/GITHUB_CLIENT_SECRET"
+        },
+        {
+          "name": "GITHUB_OAUTH_REDIRECT_URI",
+          "valueFrom": "arn:aws:ssm:us-east-1:038462753447:parameter/infrasync/GITHUB_OAUTH_REDIRECT_URI"
+        },
+        {
+          "name": "GITHUB_TOKEN",
+          "valueFrom": "arn:aws:ssm:us-east-1:038462753447:parameter/infrasync/GITHUB_TOKEN"
+        },
+        {
+          "name": "FRONTEND_URL",
+          "valueFrom": "arn:aws:ssm:us-east-1:038462753447:parameter/infrasync/FRONTEND_URL"
+        },
+        {
+          "name": "JWT_EXPIRE_MINUTES",
+          "valueFrom": "arn:aws:ssm:us-east-1:038462753447:parameter/infrasync/JWT_EXPIRE_MINUTES"
+        },
+        {
+          "name": "ENABLE_METRICS",
+          "valueFrom": "arn:aws:ssm:us-east-1:038462753447:parameter/infrasync/ENABLE_METRICS"
+        },
+        {
+          "name": "RATE_LIMIT_AUTH",
+          "valueFrom": "arn:aws:ssm:us-east-1:038462753447:parameter/infrasync/RATE_LIMIT_AUTH"
+        },
+        {
+          "name": "STRIPE_WEBHOOK_SECRET",
+          "valueFrom": "arn:aws:ssm:us-east-1:038462753447:parameter/infrasync/STRIPE_WEBHOOK_SECRET"
+        },
+        {
+          "name": "OPENAI_API_KEY",
+          "valueFrom": "arn:aws:ssm:us-east-1:038462753447:parameter/infrasync/OPENAI_API_KEY"
+        },
+        {
+          "name": "OPENAI_MODEL",
+          "valueFrom": "arn:aws:ssm:us-east-1:038462753447:parameter/infrasync/OPENAI_MODEL"
+        },
+        {
+          "name": "FERNET_KEY",
+          "valueFrom": "arn:aws:ssm:us-east-1:038462753447:parameter/infrasync/FERNET_KEY"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/infrasync-task",
+          "awslogs-create-group": "true",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "ecs"
+        }
+      },
+      "healthCheck": {
+        "command": ["CMD-SHELL", "curl -f localhost:8000/health || exit 1"],
+        "interval": 30,
+        "timeout": 5,
+        "retries": 3,
+        "startPeriod": 10
+      },
+      "systemControls": []
+    }
+  ],
+  "family": "infrasync-task",
+  "executionRoleArn": "arn:aws:iam::038462753447:role/ecsTaskExecutionRole",
+  "networkMode": "awsvpc",
+  "revision": 3,
+  "volumes": [],
+  "status": "ACTIVE",
+  "requiresAttributes": [
+    {
+      "name": "com.amazonaws.ecs.capability.logging-driver.awslogs"
+    },
+    {
+      "name": "ecs.capability.execution-role-awslogs"
+    },
+    {
+      "name": "com.amazonaws.ecs.capability.ecr-auth"
+    },
+    {
+      "name": "com.amazonaws.ecs.capability.docker-remote-api.1.19"
+    },
+    {
+      "name": "ecs.capability.container-health-check"
+    },
+    {
+      "name": "ecs.capability.execution-role-ecr-pull"
+    },
+    {
+      "name": "ecs.capability.secrets.ssm.environment-variables"
+    },
+    {
+      "name": "com.amazonaws.ecs.capability.docker-remote-api.1.18"
+    },
+    {
+      "name": "ecs.capability.task-eni"
+    },
+    {
+      "name": "com.amazonaws.ecs.capability.docker-remote-api.1.29"
+    }
+  ],
+  "placementConstraints": [],
+  "compatibilities": ["EC2", "FARGATE"],
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "512",
+  "memory": "1024",
+  "runtimePlatform": {
+    "cpuArchitecture": "X86_64",
+    "operatingSystemFamily": "LINUX"
+  },
+  "registeredAt": "2025-07-17T22:07:23.602Z",
+  "registeredBy": "arn:aws:iam::038462753447:root",
+  "enableFaultInjection": false,
+  "tags": []
+}
