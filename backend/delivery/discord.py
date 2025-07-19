@@ -10,7 +10,11 @@ class DiscordService:
         pass
 
     async def send_digest(
-        self, summary: str, repo_name: str, repo_url: str, webhook_url: Optional[str] = None
+        self,
+        summary: str,
+        repo_name: str,
+        repo_url: str,
+        webhook_url: Optional[str] = None,
     ) -> bool:
         """Send repository digest to Discord via webhook."""
         # TODO: Implement Discord webhook sending

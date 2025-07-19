@@ -19,7 +19,7 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 # Type variable for decorators
-F = TypeVar('F', bound=Callable[..., Awaitable[Any]])
+F = TypeVar("F", bound=Callable[..., Awaitable[Any]])
 
 
 class ErrorReportingService:
@@ -134,7 +134,9 @@ class ErrorReportingService:
         log_level = getattr(logging, level.upper(), logging.ERROR)
         logger.log(log_level, message)
 
-    def set_user_context(self, user_id: str, email: str, org_id: Optional[str] = None) -> None:
+    def set_user_context(
+        self, user_id: str, email: str, org_id: Optional[str] = None
+    ) -> None:
         """Set user context for error reporting"""
         if self.sentry_initialized and SENTRY_AVAILABLE:
             sentry_sdk.set_user(

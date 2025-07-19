@@ -34,7 +34,9 @@ class SlackService:
             logger.error(f"Error sending to Slack: {str(e)}")
             return False
 
-    def _format_message(self, summary: str, repo_name: str, repo_url: str) -> dict[str, Any]:
+    def _format_message(
+        self, summary: str, repo_name: str, repo_url: str
+    ) -> dict[str, Any]:
         """Format the message for Slack with clickable repo name in the title."""
         return {
             "text": f"📊 Daily Digest: {repo_name}",

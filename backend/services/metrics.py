@@ -13,7 +13,7 @@ from typing import Any, Callable, TypeVar, Awaitable
 logger = logging.getLogger(__name__)
 
 # Type variable for decorators
-F = TypeVar('F', bound=Callable[..., Awaitable[Any]])
+F = TypeVar("F", bound=Callable[..., Awaitable[Any]])
 
 # Create a registry for metrics
 registry = CollectorRegistry()
@@ -124,7 +124,9 @@ class MetricsService:
     def __init__(self) -> None:
         self.start_time = time.time()
 
-    def record_request(self, method: str, endpoint: str, status: int, duration: float) -> None:
+    def record_request(
+        self, method: str, endpoint: str, status: int, duration: float
+    ) -> None:
         """Record HTTP request metrics"""
         http_requests_total.labels(
             method=method, endpoint=endpoint, status=status

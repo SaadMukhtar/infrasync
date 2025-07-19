@@ -58,7 +58,9 @@ def github_login() -> RedirectResponse:
 
 
 @router.get("/auth/github/callback")
-async def github_callback(request: Request, code: Optional[str] = None) -> RedirectResponse:
+async def github_callback(
+    request: Request, code: Optional[str] = None
+) -> RedirectResponse:
     if not code:
         raise HTTPException(
             status_code=400, detail="Missing code from GitHub OAuth callback"
@@ -94,7 +96,9 @@ async def github_callback(request: Request, code: Optional[str] = None) -> Redir
         emails = email_resp.json()
         primary_email = next((e["email"] for e in emails if e.get("primary")), None)
         if primary_email is None:
-            raise HTTPException(status_code=400, detail="No primary email found in GitHub profile")
+            raise HTTPException(
+                status_code=400, detail="No primary email found in GitHub profile"
+            )
         # Store or update user in Supabase
         user = await get_or_create_user(
             github_id=user_data["id"],
@@ -102,7 +106,12 @@ async def github_callback(request: Request, code: Optional[str] = None) -> Redir
             email=primary_email,
             access_token=access_token,
         )  # type: ignore
-        if not isinstance(user, dict) or "id" not in user or "username" not in user or "email" not in user:
+        if (
+            not isinstance(user, dict)
+            or "id" not in user
+            or "username" not in user
+            or "email" not in user
+        ):
             raise HTTPException(status_code=400, detail="User get or create failed.")
         # Get org context
         org_id, role = await get_user_org_and_role(user["id"])  # type: ignore
@@ -208,7 +217,9 @@ def logout(response: Response) -> dict[str, str]:
 
 
 @router.delete("/auth/me")
-def delete_own_account(response: Response, jwt_token: Optional[str] = Cookie(None)) -> dict[str, str]:
+def delete_own_account(
+    response: Response, jwt_token: Optional[str] = Cookie(None)
+) -> dict[str, str]:
     if jwt_token is None:
         raise HTTPException(status_code=401, detail="Not authenticated")
     payload = verify_jwt_token(jwt_token)
@@ -246,7 +257,9 @@ def cleanup_deleted_users(
 
 
 @router.get("/auth/validate-deletion")
-def validate_account_deletion(jwt_token: Optional[str] = Cookie(None)) -> dict[str, Any]:
+def validate_account_deletion(
+    jwt_token: Optional[str] = Cookie(None),
+) -> dict[str, Any]:
     """Validate what will happen when user deletes their account"""
     if jwt_token is None:
         raise HTTPException(status_code=401, detail="Not authenticated")
@@ -263,7 +276,9 @@ def validate_account_deletion(jwt_token: Optional[str] = Cookie(None)) -> dict[s
 
 
 @router.get("/github/validate-repo")
-async def validate_github_repo(repo: str = Query(...), jwt_token: Optional[str] = Cookie(None)) -> dict[str, Any]:
+async def validate_github_repo(
+    repo: str = Query(...), jwt_token: Optional[str] = Cookie(None)
+) -> dict[str, Any]:
     if jwt_token is None:
         raise HTTPException(status_code=401, detail="Not authenticated")
     payload = verify_jwt_token(jwt_token)

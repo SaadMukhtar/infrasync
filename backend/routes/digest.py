@@ -10,7 +10,7 @@ from services.digest import DigestService
 from services.monitor import MonitorService
 from datetime import datetime
 import logging
-from typing import Any, Dict
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -66,7 +66,9 @@ async def create_digest(request: Request, body: DigestRequest) -> DigestResponse
         if body.delivery_method == "slack":
             slack_service = SlackService()
             if body.webhook_url is None:
-                raise HTTPException(status_code=400, detail="Slack webhook URL required")
+                raise HTTPException(
+                    status_code=400, detail="Slack webhook URL required"
+                )
             success = await slack_service.send_digest(
                 summary=summary,
                 repo_name=repo_data["repository"]["full_name"],
@@ -80,7 +82,9 @@ async def create_digest(request: Request, body: DigestRequest) -> DigestResponse
         elif body.delivery_method == "discord":
             discord_service = DiscordService()
             if body.webhook_url is None:
-                raise HTTPException(status_code=400, detail="Discord webhook URL required")
+                raise HTTPException(
+                    status_code=400, detail="Discord webhook URL required"
+                )
             success = await discord_service.send_digest(
                 summary=summary,
                 repo_name=repo_data["repository"]["full_name"],
@@ -258,7 +262,9 @@ async def try_digest(request: Request, body: DigestRequest) -> DigestResponse:
         raise HTTPException(status_code=500, detail=str(e))
 
 
-def extract_metrics(summary_counts: dict[str, Any], grouped_commits: dict[str, Any]) -> dict[str, Any]:
+def extract_metrics(
+    summary_counts: dict[str, Any], grouped_commits: dict[str, Any]
+) -> dict[str, Any]:
     return {
         "prs_opened": summary_counts.get("prs_opened", 0),
         "prs_closed": summary_counts.get("prs_closed", 0),

@@ -73,7 +73,9 @@ async def check_dependencies() -> None:
         from config import SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
 
         if SUPABASE_URL is None or SUPABASE_SERVICE_ROLE_KEY is None:
-            raise ValueError("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must not be None")
+            raise ValueError(
+                "SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must not be None"
+            )
         client = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
         # Simple query to test connection
         client.table("monitors").select("id").limit(1).execute()
@@ -187,7 +189,8 @@ async def root() -> dict[str, Any]:
 @app.get("/health")
 async def health_check() -> dict[str, Any]:
     """Comprehensive health check endpoint."""
-    from typing import Dict, Any
+    from typing import Any
+
     health_status: dict[str, Any] = {
         "status": "healthy",
         "timestamp": time.time(),

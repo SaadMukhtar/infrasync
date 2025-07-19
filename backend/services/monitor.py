@@ -21,7 +21,9 @@ class MonitorService:
         self.client: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
         self.github_service = GitHubService()
 
-    async def get_by_repo_and_webhook(self, repo: str, webhook_url: str) -> Optional[Monitor]:
+    async def get_by_repo_and_webhook(
+        self, repo: str, webhook_url: str
+    ) -> Optional[Monitor]:
         try:
             result = (
                 self.client.table("monitors")
@@ -105,7 +107,9 @@ class MonitorService:
             return []
         return [Monitor(**row) for row in result.data]
 
-    async def delete_monitor(self, monitor_id: str, org_id: str) -> Optional[Dict[str, Any]]:
+    async def delete_monitor(
+        self, monitor_id: str, org_id: str
+    ) -> Optional[Dict[str, Any]]:
         # Fetch the monitor first
         result = (
             self.client.table("monitors")

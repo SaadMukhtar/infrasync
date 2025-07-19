@@ -65,7 +65,9 @@ def get_org_members(jwt_token: str = Cookie(None)) -> dict[str, Any]:
 
 
 @router.post("/invite")
-def invite_member(body: InviteMemberRequest, jwt_token: str = Cookie(None)) -> dict[str, Any]:
+def invite_member(
+    body: InviteMemberRequest, jwt_token: str = Cookie(None)
+) -> dict[str, Any]:
     payload = verify_jwt_token(jwt_token)
     if not payload or not payload.get("org_id"):
         raise HTTPException(status_code=401, detail="Invalid or missing org context")
@@ -119,7 +121,9 @@ def update_member_role(
 
 
 @router.delete("/members/{user_id}")
-def remove_member(user_id: str = Path(...), jwt_token: str = Cookie(None)) -> dict[str, Any]:
+def remove_member(
+    user_id: str = Path(...), jwt_token: str = Cookie(None)
+) -> dict[str, Any]:
     payload = verify_jwt_token(jwt_token)
     if not payload or not payload.get("org_id"):
         raise HTTPException(status_code=401, detail="Invalid or missing org context")
@@ -207,7 +211,9 @@ def join_org(body: JoinOrgRequest, jwt_token: str = Cookie(None)) -> dict[str, A
 
 
 @router.get("/audit-logs")
-def get_audit_logs(jwt_token: str = Cookie(None), limit: int = Query(50, le=100)) -> dict[str, Any]:
+def get_audit_logs(
+    jwt_token: str = Cookie(None), limit: int = Query(50, le=100)
+) -> dict[str, Any]:
     payload = verify_jwt_token(jwt_token)
     if not payload or not payload.get("org_id"):
         raise HTTPException(status_code=401, detail="Invalid or missing org context")
@@ -251,7 +257,9 @@ def cleanup_deleted_orgs(
 
 
 @router.get("/metrics")
-def get_org_metrics(jwt_token: str = Cookie(None), period_days: int = Query(7, ge=1, le=90)) -> dict[str, Any]:
+def get_org_metrics(
+    jwt_token: str = Cookie(None), period_days: int = Query(7, ge=1, le=90)
+) -> dict[str, Any]:
     payload = verify_jwt_token(jwt_token)
     if not payload or not payload.get("org_id"):
         raise HTTPException(status_code=401, detail="Invalid or missing org context")

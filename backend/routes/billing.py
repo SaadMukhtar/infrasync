@@ -9,7 +9,7 @@ from config import (
 import stripe
 from services.org import OrgService
 from utils.jwt import verify_jwt_token
-from typing import Any
+from typing import Any, Dict
 import os
 
 stripe.api_key = STRIPE_SECRET_KEY
@@ -31,13 +31,17 @@ def get_jwt_payload(jwt_token: str = Cookie(None)) -> dict[str, Any]:
     return payload
 
 
-def require_org_admin(payload: dict[str, Any] = Depends(get_jwt_payload)) -> dict[str, Any]:
+def require_org_admin(
+    payload: dict[str, Any] = Depends(get_jwt_payload)
+) -> dict[str, Any]:
     if payload.get("role") != "admin":
         raise HTTPException(status_code=403, detail="Admin access required")
     return payload
 
 
-def require_org_member(payload: dict[str, Any] = Depends(get_jwt_payload)) -> dict[str, Any]:
+def require_org_member(
+    payload: dict[str, Any] = Depends(get_jwt_payload)
+) -> dict[str, Any]:
     if not payload.get("org_id"):
         raise HTTPException(status_code=401, detail="No org context")
     return payload
@@ -59,7 +63,7 @@ async def get_org_by_id(org_id: str) -> dict[str, Any]:
     )
     if not org_data.data:
         raise HTTPException(status_code=404, detail="Org not found")
-    org = org_data.data
+    org: Dict[str, Any] = org_data.data
     # Add monitor count for enforcement (only non-deleted monitors)
     monitor_count = (
         org_service.supabase.table("monitors")
@@ -104,7 +108,9 @@ def get_plan_from_subscription(subscription: dict[str, Any]) -> str:
 
 @router.post("/upgrade-subscription")
 async def upgrade_subscription(
-    org_id: str = Body(...), plan: str = Body(...), payload: dict[str, Any] = Depends(require_org_admin)
+    org_id: str = Body(...),
+    plan: str = Body(...),
+    payload: dict[str, Any] = Depends(require_org_admin),
 ) -> dict[str, str]:
     org = await get_org_by_id(org_id)
     if org.get("is_internal"):
@@ -167,7 +173,7 @@ async def upgrade_subscription(
 @router.post("/create-checkout-session")
 async def create_checkout_session(
     org_id: str, plan: str, payload=Depends(require_org_admin)
-):
+) -> Dict:
     org = await get_org_by_id(org_id)
     if org.get("is_internal"):
         raise HTTPException(403, "Internal orgs are free")
@@ -209,7 +215,9 @@ async def create_checkout_session(
 
 # Update portal session to always redirect to /billing
 @router.post("/create-portal-session")
-async def create_portal_session(org_id: str, payload: dict[str, Any] = Depends(require_org_admin)) -> dict[str, str]:
+async def create_portal_session(
+    org_id: str, payload: dict[str, Any] = Depends(require_org_admin)
+) -> dict[str, str]:
     org = await get_org_by_id(org_id)
     if not org.get("stripe_customer_id"):
         raise HTTPException(400, "No Stripe customer for org")
@@ -322,7 +330,9 @@ async def stripe_webhook(request: Request) -> dict[str, str]:
 
 
 @router.get("/status")
-async def billing_status(org_id: str, payload: dict[str, Any] = Depends(require_org_member)) -> dict[str, Any]:
+async def billing_status(
+    org_id: str, payload: dict[str, Any] = Depends(require_org_member)
+) -> dict[str, Any]:
     org = await get_org_by_id(org_id)
     return {
         "plan": org["plan"],
@@ -335,7 +345,9 @@ async def billing_status(org_id: str, payload: dict[str, Any] = Depends(require_
 
 
 @router.post("/refresh")
-async def refresh_billing_status(org_id: str, payload: dict[str, Any] = Depends(require_org_member)) -> dict[str, Any]:
+async def refresh_billing_status(
+    org_id: str, payload: dict[str, Any] = Depends(require_org_member)
+) -> dict[str, Any]:
     """Manually refresh billing status by syncing with Stripe"""
     org = await get_org_by_id(org_id)
 

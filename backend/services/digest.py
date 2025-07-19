@@ -9,7 +9,9 @@ class DigestService:
             raise ValueError("Supabase environment variables not set")
         self.client = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
-    def get_monitor_digests(self, monitor_id: str, limit: int = 5) -> List[Dict[str, Any]]:
+    def get_monitor_digests(
+        self, monitor_id: str, limit: int = 5
+    ) -> List[Dict[str, Any]]:
         digests_result = (
             self.client.table("digests")
             .select(
@@ -50,7 +52,11 @@ class DigestService:
         self.client.table("digests").insert(digest).execute()
 
     def aggregate_metrics(
-        self, org_id: Optional[str] = None, monitor_id: Optional[str] = None, period_days: int = 7, offset_days: int = 0
+        self,
+        org_id: Optional[str] = None,
+        monitor_id: Optional[str] = None,
+        period_days: int = 7,
+        offset_days: int = 0,
     ) -> Dict[str, int]:
         from datetime import datetime, timedelta
 
@@ -119,7 +125,9 @@ class DigestService:
 
         return (datetime.utcnow() - timedelta(days=days)).isoformat()
 
-    def timeseries_metrics(self, monitor_id: str, period_days: int = 30) -> List[Dict[str, Any]]:
+    def timeseries_metrics(
+        self, monitor_id: str, period_days: int = 30
+    ) -> List[Dict[str, Any]]:
         from datetime import datetime, timedelta
         import collections
 

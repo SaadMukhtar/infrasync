@@ -477,7 +477,9 @@ class OrgService:
             print(f"Error disbanding org {org_id}: {e}")
             return {}, f"Failed to disband organization: {e}"
 
-    def enforce_plan_limits(self, org: Dict[str, Any], resource_type: str, current_count: int) -> None:
+    def enforce_plan_limits(
+        self, org: Dict[str, Any], resource_type: str, current_count: int
+    ) -> None:
         """Raise HTTPException if org exceeds plan limits for resource_type ('repo' or 'channel')."""
         if org.get("is_internal"):
             return

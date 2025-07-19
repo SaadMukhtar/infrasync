@@ -3,7 +3,7 @@ import os
 from supabase import create_client
 from cryptography.fernet import Fernet
 import datetime
-from typing import Any, Dict, Optional, Tuple, Union
+from typing import Any, Dict, Optional, Tuple
 
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
@@ -27,7 +27,9 @@ def decrypt_token(token_enc: str) -> str:
     return fernet.decrypt(token_enc.encode()).decode()
 
 
-async def get_or_create_user(github_id: str, username: str, email: str, access_token: str) -> Optional[Dict[str, Any]]:
+async def get_or_create_user(
+    github_id: str, username: str, email: str, access_token: str
+) -> Optional[Dict[str, Any]]:
     # Encrypt the access token for storage
     encrypted_token = encrypt_token(access_token)
 
@@ -252,8 +254,9 @@ async def get_user_by_id(user_id: str) -> Optional[Dict[str, Any]]:
         .maybe_single()
         .execute()
     )
-    if resp.data and isinstance(resp.data, dict):
-        return resp.data
+    data: Dict[str, Any] = resp.data
+    if data:
+        return data
     return None
 
 

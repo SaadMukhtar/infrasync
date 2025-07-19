@@ -13,7 +13,13 @@ class AuditLogService:
         self.client: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
     def log_action(
-        self, org_id: str, actor_id: str, action: str, target_type: str, target_id: str, details: Optional[Dict[str, Any]] = None
+        self,
+        org_id: str,
+        actor_id: str,
+        action: str,
+        target_type: str,
+        target_id: str,
+        details: Optional[Dict[str, Any]] = None,
     ) -> None:
         details = details or {}
         log = {

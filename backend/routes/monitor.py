@@ -15,10 +15,10 @@ from typing import List
 from typing import cast, Dict
 
 router: APIRouter = APIRouter()
-service: MonitorService = MonitorService() 
-audit_service: AuditLogService = AuditLogService() 
-digest_service: DigestService = DigestService() 
-org_service: OrgService = OrgService() 
+service: MonitorService = MonitorService()
+audit_service: AuditLogService = AuditLogService()
+digest_service: DigestService = DigestService()
+org_service: OrgService = OrgService()
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +33,9 @@ async def get_org_context(jwt_token: str = Cookie(None)) -> dict[str, Any]:
 
 @router.get("/monitor")
 @limiter.limit("100/minute")
-async def list_monitors(request: Request, org: dict[str, Any] = Depends(get_org_context)) -> dict[str, Any]:
+async def list_monitors(
+    request: Request, org: dict[str, Any] = Depends(get_org_context)
+) -> dict[str, Any]:
     monitors = await service.list_monitors(str(org["org_id"]))
     return {"monitors": monitors}
 
@@ -84,7 +86,9 @@ async def create_monitor(
     if config.delivery_method == "slack" and config.webhook_url:
         # Allow multiple monitors in the same org to use the same webhook
         # Block if another org (not deleted) is using this webhook
-        if org_service.is_webhook_used_by_other_org(str(config.webhook_url), org["org_id"]):
+        if org_service.is_webhook_used_by_other_org(
+            str(config.webhook_url), org["org_id"]
+        ):
             raise HTTPException(
                 400,
                 detail="This Slack webhook is already used by another organization. Upgrade your plan to use this destination.",
@@ -131,7 +135,9 @@ async def delete_monitor(
     if not monitor:
         raise HTTPException(status_code=404, detail="Monitor not found")
     # Audit log
-    repo_value = monitor["repo"] if isinstance(monitor, dict) and "repo" in monitor else None
+    repo_value = (
+        monitor["repo"] if isinstance(monitor, dict) and "repo" in monitor else None
+    )
     audit_service.log_action(
         org_id=org["org_id"],
         actor_id=str(user_id) if user_id is not None else "",
@@ -146,7 +152,10 @@ async def delete_monitor(
 @router.patch("/monitor/{monitor_id}")
 @limiter.limit("5/minute")
 async def update_monitor_frequency(
-    monitor_id: str, data: dict[str, Any], request: Request, org: dict[str, Any] = Depends(get_org_context)
+    monitor_id: str,
+    data: dict[str, Any],
+    request: Request,
+    org: dict[str, Any] = Depends(get_org_context),
 ) -> dict[str, str]:
     new_freq = None
     if data is not None and isinstance(data, dict):
@@ -163,7 +172,9 @@ async def update_monitor_frequency(
 
 @router.get("/monitor/{monitor_id}/digests")
 async def get_monitor_digests(
-    monitor_id: str, org: dict[str, Any] = Depends(get_org_context), limit: int = Query(5, le=20)
+    monitor_id: str,
+    org: dict[str, Any] = Depends(get_org_context),
+    limit: int = Query(5, le=20),
 ) -> dict[str, Any]:
     if SUPABASE_URL is None or SUPABASE_SERVICE_ROLE_KEY is None:
         raise HTTPException(status_code=500, detail="Supabase config missing")
@@ -215,14 +226,20 @@ async def get_monitor_metrics(
     ):
         raise HTTPException(status_code=404, detail="Monitor not found")
     digest_service: DigestService = DigestService()
-    metrics = digest_service.aggregate_metrics(
-        monitor_id=monitor_id, period_days=period_days
-    ) if digest_service is not None else {}
+    metrics = (
+        digest_service.aggregate_metrics(monitor_id=monitor_id, period_days=period_days)
+        if digest_service is not None
+        else {}
+    )
     metrics = cast(Dict[str, Any], metrics)
     if compare_to_previous:
-        previous_metrics = digest_service.aggregate_metrics(
-            monitor_id=monitor_id, period_days=period_days, offset_days=period_days
-        ) if digest_service is not None else {}
+        previous_metrics = (
+            digest_service.aggregate_metrics(
+                monitor_id=monitor_id, period_days=period_days, offset_days=period_days
+            )
+            if digest_service is not None
+            else {}
+        )
         previous_metrics = cast(Dict[str, Any], previous_metrics)
         return {
             "metrics": metrics,
@@ -260,5 +277,5 @@ async def get_monitor_metrics_timeseries(
     digest_service: DigestService = DigestService()
     timeseries = digest_service.timeseries_metrics(
         monitor_id=monitor_id, period_days=period_days
-    ) 
+    )
     return {"timeseries": timeseries, "period_days": period_days}
