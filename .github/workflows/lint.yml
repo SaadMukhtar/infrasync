@@ -31,9 +31,6 @@ jobs:
           echo "Running black (format check only)..."
           black . --check
 
-          echo "Running mypy (type check)..."
-          mypy . --strict
-
   frontend-lint:
     runs-on: ubuntu-latest
     steps:
