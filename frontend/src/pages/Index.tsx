@@ -86,14 +86,14 @@ const Index = () => {
           {/* Product Screenshot */}
           <div className="flex justify-center mb-12">
             <img
-              src="/public/dashboard.png"
+              src="/dashboard.png"
               alt="Infrasync dashboard screenshot"
               className="rounded-xl shadow-lg max-w-full h-auto border"
               style={{ maxHeight: 700 }}
             />
             <div className="w-10"></div>
             <img
-              src="/public/monitor_metrics.png"
+              src="/monitor_metrics.png"
               alt="Infrasync dashboard screenshot"
               className="rounded-xl shadow-lg max-w-full h-auto border"
               style={{ maxHeight: 700 }}
