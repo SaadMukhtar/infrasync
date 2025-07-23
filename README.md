@@ -1,9 +1,7 @@
 # Infrasync 🚀
 
-![MIT License](https://img.shields.io/github/license/SaadMukhtar/infrasync)
 ![CI](https://github.com/SaadMukhtar/infrasync/actions/workflows/frontend.yml/badge.svg)
 ![CI](https://github.com/SaadMukhtar/infrasync/actions/workflows/backend.yml/badge.svg)
-![Deploy](https://img.shields.io/github/deployments/SaadMukhtar/infrasync/production)
 
 A modern, open source, multi-tenant SaaS platform for GitHub repository monitoring, AI-powered digests, and world-class observability. Built for developers, teams, and engineering leaders who want actionable insights, secure authentication, and cloud-native scalability—out of the box.
 
