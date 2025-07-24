@@ -41,9 +41,10 @@ jobs:
           sarif_file: "trivy-results.sarif"
 
   docker-deploy:
-    needs: [security-scan, test]
+    needs: [security-scan]
     runs-on: ubuntu-latest
     environment: production
+    if: github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@v4
 
