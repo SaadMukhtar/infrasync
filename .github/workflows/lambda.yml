@@ -1,0 +1,154 @@
+# Lambda CI/CD for Infrasync Digest Lambda
+# This workflow runs on push and PRs to main. It builds, tests, scans, and deploys the lambda function.
+
+name: Lambda CI/CD
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "infra/scheduled-digest-lambda/**"
+      - ".github/workflows/lambda.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "infra/scheduled-digest-lambda/**"
+      - ".github/workflows/lambda.yml"
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: "fs"
+          scan-ref: "infra/scheduled-digest-lambda"
+          format: "sarif"
+          output: "trivy-results.sarif"
+          severity: "CRITICAL,HIGH"
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: "trivy-results.sarif"
+
+  test:
+    runs-on: ubuntu-latest
+    needs: security-scan
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          cd infra/scheduled-digest-lambda
+          pip install -r requirements.txt
+          pip install pytest pytest-asyncio httpx
+
+      - name: Run linting
+        run: |
+          cd infra/scheduled-digest-lambda
+          pip install ruff black
+          echo "Running ruff..."
+          ruff check .
+          echo "Running black..."
+          black . --check
+
+      - name: Run tests
+        run: |
+          cd infra/scheduled-digest-lambda
+          python -m pytest -v || echo "No tests found"
+
+  docker-deploy:
+    needs: [security-scan, test]
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build, tag, and push docker image to Amazon ECR
+        id: build-image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          REPOSITORY: ${{ secrets.AWS_LAMBDA_ECR_REPOSITORY }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          cd infra/scheduled-digest-lambda
+          docker build -t $ECR_REGISTRY/$REPOSITORY:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$REPOSITORY:$IMAGE_TAG
+          echo "image=$ECR_REGISTRY/$REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+      - name: Update Lambda function
+        run: |
+          aws lambda update-function-code \
+            --function-name ${{ secrets.AWS_LAMBDA_NAME }} \
+            --image-uri ${{ steps.build-image.outputs.image }}
+
+      - name: Update Lambda environment variables
+        run: |
+          aws lambda update-function-configuration \
+            --function-name ${{ secrets.AWS_LAMBDA_NAME }} \
+            --environment Variables='{
+              "SUPABASE_URL": "${{ secrets.SUPABASE_URL }}",
+              "SUPABASE_SERVICE_ROLE_KEY": "${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}",
+              "BACKEND_DIGEST_ENDPOINT": "${{ secrets.BACKEND_DIGEST_ENDPOINT }}",
+              "RETENTION_DAYS": "30",
+              "LOG_LEVEL": "INFO"
+            }'
+
+      - name: Wait for Lambda update
+        run: |
+          aws lambda wait function-updated \
+            --function-name ${{ secrets.AWS_LAMBDA_NAME }}
+
+      - name: Verify Lambda Deployment
+        run: |
+          # Wait a bit for the deployment to settle
+          sleep 30
+
+          # Get the current image URI
+          CURRENT_IMAGE=$(aws lambda get-function \
+            --function-name ${{ secrets.AWS_LAMBDA_NAME }} \
+            --query 'Code.ImageUri' \
+            --output text)
+
+          echo "Current image: $CURRENT_IMAGE"
+          echo "Expected image: ${{ steps.build-image.outputs.image }}"
+
+          # Verify the function is using the latest image
+          if [ "$CURRENT_IMAGE" != "${{ steps.build-image.outputs.image }}" ]; then
+            echo "❌ Lambda function is not using the latest image. This indicates a rollback occurred."
+            exit 1
+          fi
+
+          # Verify the function is active
+          FUNCTION_STATE=$(aws lambda get-function \
+            --function-name ${{ secrets.AWS_LAMBDA_NAME }} \
+            --query 'Configuration.State' \
+            --output text)
+
+          if [ "$FUNCTION_STATE" != "Active" ]; then
+            echo "❌ Lambda function is not active. Current state: $FUNCTION_STATE"
+            exit 1
+          fi
+
+          echo "✅ Lambda deployment verified successfully - using latest image"

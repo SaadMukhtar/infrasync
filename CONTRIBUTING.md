@@ -23,9 +23,9 @@ By participating, you agree to abide by our [Code of Conduct](CODE_OF_CONDUCT.md
 
 ### 1. **Open an Issue**
 
-- Found a bug? Have a feature request? [Open an issue](https://github.com/SaadMukhtar/infrasync/issues).
-- Please search existing issues before creating a new one.
-- Use clear, descriptive titles and provide as much context as possible.
+- Found a bug? Have a feature request? Please [open an issue](https://github.com/SaadMukhtar/infrasync/issues) before starting work.
+- Every feature or fix should ideally begin with an issue—this helps track discussion and connect your work to the roadmap.
+- You can later link your PR to the issue with `Closes #123` in the description.
 
 ### 2. **Fork & Clone**
 

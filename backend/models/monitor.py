@@ -14,6 +14,8 @@ class Monitor(BaseModel):
     created_at: datetime
     is_private: bool
     created_by: str
+    deleted: Optional[bool] = False
+    deleted_at: Optional[datetime] = None
 
     class Config:
         json_encoders = {
