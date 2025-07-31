@@ -1,6 +1,7 @@
 import httpx
 import logging
 from typing import Any
+import urllib.parse
 
 logger = logging.getLogger(__name__)
 
@@ -15,6 +16,10 @@ class SlackService:
             webhook = webhook_url
             if not webhook:
                 raise ValueError("No Slack webhook URL provided")
+
+            if not self._is_valid_slack_webhook_url(webhook):
+                logger.error(f"Invalid Slack webhook URL: {webhook}")
+                return False
 
             message = self._format_message(summary, repo_name, repo_url)
 
@@ -34,6 +39,22 @@ class SlackService:
             logger.error(f"Error sending to Slack: {str(e)}")
             return False
 
+    def _is_valid_slack_webhook_url(self, url: str) -> bool:
+        """
+        Validate that the webhook URL is a Slack webhook endpoint.
+        Only allow URLs with scheme 'https' and netloc 'hooks.slack.com'.
+        """
+        try:
+            parsed = urllib.parse.urlparse(url)
+            if (
+                parsed.scheme == "https"
+                and parsed.netloc == "hooks.slack.com"
+                and parsed.path.startswith("/services/")
+            ):
+                return True
+            return False
+        except Exception:
+            return False
     def _format_message(
         self, summary: str, repo_name: str, repo_url: str
     ) -> dict[str, Any]:
