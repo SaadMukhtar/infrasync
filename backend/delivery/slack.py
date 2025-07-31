@@ -55,6 +55,7 @@ class SlackService:
             return False
         except Exception:
             return False
+
     def _format_message(
         self, summary: str, repo_name: str, repo_url: str
     ) -> dict[str, Any]:
