@@ -4,7 +4,7 @@ openai==1.92.2
 pydantic==2.11.7
 python-dotenv==1.1.1
 supabase==2.16.0
-uvicorn==0.34.3
+uvicorn==0.35.0
 slowapi==0.1.8
 python-jose[cryptography]==3.3.0
 email-validator==2.1.0
